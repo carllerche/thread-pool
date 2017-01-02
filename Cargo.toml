@@ -1,0 +1,17 @@
+[package]
+name = "thread-pool"
+version = "0.1.0"
+authors = ["Carl Lerche <me@carllerche.com>"]
+
+license = "MIT/Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/carllerche/thread-pool"
+homepage = "https://github.com/carllerche/thread-pool"
+documentation = "https://docs.rs/thread-pool"
+description = """
+A thread pool for running a number of jobs on shared worker threads.
+"""
+
+[dependencies]
+num_cpus = "1.2.0"
+two-lock-queue = "0.1"
