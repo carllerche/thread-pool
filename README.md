@@ -2,6 +2,9 @@
 
 A library for executing tasks on reusable threads.
 
+[![Build Status](https://travis-ci.org/carllerche/thread-pool.svg?branch=master)](https://travis-ci.org/carllerche/thread-pool)
+[![Crates.io](https://img.shields.io/crates/v/thread-pool.svg?maxAge=2592000)](https://crates.io/crates/thread-pool)
+
 [Documentation](https://docs.rs/thread-pool)
 
 ## Usage
