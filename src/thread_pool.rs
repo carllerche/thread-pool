@@ -576,9 +576,6 @@ impl<T: Task> Worker<T> {
             // is essentially unwind safe
             let _ = panic::catch_unwind(AssertUnwindSafe(move || task.run()));
         }
-
-        // Run the after hook
-        self.inner.config.before_stop.as_ref().map(|f| f());
     }
 
     // Gets the next task, blocking if necessary. Returns None if the worker
@@ -594,6 +591,9 @@ impl<T: Task> Worker<T> {
 
         loop {
             if state.lifecycle() >= Lifecycle::Stop {
+                // Run the after hook
+                self.inner.config.before_stop.as_ref().map(|f| f());
+
                 // No more tasks should be removed from the queue, exit the
                 // worker
                 self.decrement_worker_count();
@@ -619,6 +619,9 @@ impl<T: Task> Worker<T> {
                 // Only shutdown all threads if the work queue is empty
                 if wc > 1 || self.rx.len() == 0 {
                     if self.inner.state.compare_and_dec_worker_count(state) {
+                        // Run the after hook
+                        self.inner.config.before_stop.as_ref().map(|f| f());
+
                         // This can never be a termination state since the
                         // lifecycle is not Stop or Terminate (checked above) and
                         // the queue has not been accessed, so it is unknown
@@ -643,6 +646,9 @@ impl<T: Task> Worker<T> {
                     task = Some(t);
                 }
                 Err(RecvTimeoutError::Disconnected) => {
+                    // Run the after hook
+                    self.inner.config.before_stop.as_ref().map(|f| f());
+
                     // No more tasks should be removed from the queue, exit the
                     // worker
                     self.decrement_worker_count();
