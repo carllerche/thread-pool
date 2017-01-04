@@ -307,6 +307,9 @@ fn lifecycle_test() {
 
     pool.prestart_core_threads();
 
+    // Wait a bit
+    thread::sleep(Duration::from_millis(500));
+
     sender.send_fn(|| {
         println!("boop");
     }).unwrap();
