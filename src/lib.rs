@@ -20,7 +20,7 @@
 //! scenarios. Otherwise, use the following guide when manually configuring and
 //! tuning a `ThreadPool`.
 
-#![deny(warnings, missing_docs)]
+#![deny(warnings, missing_docs, missing_debug_implementations)]
 
 extern crate num_cpus;
 extern crate two_lock_queue;

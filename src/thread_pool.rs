@@ -3,7 +3,7 @@ use state::{AtomicState, Lifecycle, CAPACITY};
 use two_lock_queue::{self as mpmc, SendError, SendTimeoutError, TrySendError, RecvTimeoutError};
 use num_cpus;
 
-use std::{thread, usize};
+use std::{fmt, thread, usize};
 use std::sync::{Arc, Mutex, Condvar};
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
@@ -20,6 +20,7 @@ pub struct ThreadPool<T> {
 ///
 /// Provide detailed control over the properties and behavior of the thread
 /// pool.
+#[derive(Debug)]
 pub struct Builder {
     // Thread pool specific configuration values
     thread_pool: Config,
@@ -122,6 +123,52 @@ struct Inner<T> {
     config: Config,
 }
 
+impl<T> Clone for ThreadPool<T> {
+    fn clone(&self) -> Self {
+        ThreadPool { inner: self.inner.clone() }
+    }
+}
+
+impl<T> Clone for Sender<T> {
+    fn clone(&self) -> Self {
+        Sender {
+            tx: self.tx.clone(),
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl fmt::Debug for Config {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        const SOME: &'static &'static str = &"Some(_)";
+        const NONE: &'static &'static str = &"None";
+
+        fmt.debug_struct("ThreadPool")
+           .field("core_pool_size", &self.core_pool_size)
+           .field("core_pool_size", &self.core_pool_size)
+           .field("max_pool_size", &self.max_pool_size)
+           .field("keep_alive", &self.keep_alive)
+           .field("allow_core_thread_timeout", &self.allow_core_thread_timeout)
+           .field("name_prefix", &self.name_prefix)
+           .field("stack_size", &self.stack_size)
+           .field("after_start", if self.after_start.is_some() { SOME } else { NONE })
+           .field("before_stop", if self.before_stop.is_some() { SOME } else { NONE })
+           .finish()
+    }
+}
+
+impl<T> fmt::Debug for ThreadPool<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("ThreadPool").finish()
+    }
+}
+
+impl<T> fmt::Debug for Sender<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("Sender").finish()
+    }
+}
+
 /// Tracks state associated with a worker thread
 struct Worker<T> {
     // Work queue receive handle
@@ -156,9 +203,6 @@ impl Builder {
     ///
     /// The number of threads to keep in the pool, even if they are idle.
     pub fn core_pool_size(mut self, val: usize) -> Self {
-        assert!(val >= 1, "at least one thread required");
-        assert!(val <= self.thread_pool.max_pool_size, "value cannot be greater than `max_pool_size`");
-
         self.thread_pool.core_pool_size = val;
         self
     }
@@ -167,8 +211,6 @@ impl Builder {
     ///
     /// The maximum number of threads to allow in the pool.
     pub fn max_pool_size(mut self, val: usize) -> Self {
-        assert!(val >= self.thread_pool.core_pool_size, "value must be greater or equal to `core_pool_size`");
-
         self.thread_pool.max_pool_size = val;
         self
     }
@@ -234,6 +276,13 @@ impl Builder {
 
     /// Build and return the configured thread pool
     pub fn build<T: Task>(self) -> (Sender<T>, ThreadPool<T>) {
+        assert!(self.thread_pool.core_pool_size >= 1, "at least one thread required");
+        assert!(self.thread_pool.core_pool_size <= self.thread_pool.max_pool_size,
+                "`core_pool_size` cannot be greater than `max_pool_size`");
+        assert!(self.thread_pool.max_pool_size >= self.thread_pool.core_pool_size,
+                "`max_pool_size` must be greater or equal to `core_pool_size`");
+
+
         // Create the work queue
         let (tx, rx) = mpmc::channel(self.work_queue_capacity);
 

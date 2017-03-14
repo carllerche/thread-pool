@@ -40,6 +40,23 @@ fn one_thread_basic() {
 }
 
 #[test]
+fn clone() {
+    let (sender, _) = ThreadPool::fixed_size(1);
+    let (tx, rx) = mpsc::sync_channel(0);
+
+    sender.clone().send(move || {
+        tx.send("hi").unwrap();
+    }).unwrap();
+
+    assert_eq!("hi", rx.recv().unwrap());
+}
+
+#[test]
+fn debug() {
+    format!("{:?}", ThreadPool::<Box<TaskBox>>::fixed_size(1));
+}
+
+#[test]
 fn two_thread_basic() {
     let (sender, _) = ThreadPool::fixed_size(2);
     let (tx, rx) = mpsc::sync_channel(0);
@@ -58,6 +75,12 @@ fn two_thread_basic() {
     for &msg in ["hi", "hi", "bye", "bye"].iter() {
         assert_eq!(msg, rx.recv().unwrap());
     }
+}
+
+#[test]
+fn num_cpus_plus_1() {
+    extern crate num_cpus;
+    ThreadPool::<Box<TaskBox>>::fixed_size(num_cpus::get() + 1);
 }
 
 #[test]
